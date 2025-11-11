@@ -1,0 +1,13 @@
+package com.example.labx.domain.model
+
+/**
+ * Representa un item individual en el carrito
+ */
+data class ItemCarrito(
+    val producto: Producto,
+    val cantidad: Int = 1
+) {
+    // Propiedad calculada: subtotal del item
+    val subtotal: Double 
+        get() = producto.precio * cantidad
+}
