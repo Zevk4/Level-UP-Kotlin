@@ -2,6 +2,7 @@ package com.example.labx.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.labx.domain.model.Rol
 
 /**
  * Se encarga de gestiona datos persistentes simples
@@ -18,8 +19,9 @@ class PreferenciasManager(context: Context) {
         private const val NOMBRE_ARCHIVO = "level_up_commerce_prefs"
         
         // Claves (constantes para evitar typos)
-        private const val KEY_ADMIN_LOGUEADO = "admin_logueado"
-        private const val KEY_USERNAME_ADMIN = "username_admin"
+        private const val KEY_IS_LOGGED_IN = "is_logged_in"
+        private const val KEY_USERNAME = "username"
+        private const val KEY_USER_ROLE = "user_role"
         
         // Credenciales por defecto (en app real, estarían en BD segura)
         const val ADMIN_USERNAME = "admin"
@@ -27,40 +29,70 @@ class PreferenciasManager(context: Context) {
     }
     
     /**
-     * Guarda sesión de admin
+     * Guarda sesión de usuario (cualquier rol)
      */
-    fun guardarSesionAdmin(username: String) {
+    fun guardarSesion(username: String, rol: Rol) {
         prefs.edit().apply {
-            putBoolean(KEY_ADMIN_LOGUEADO, true)
-            putString(KEY_USERNAME_ADMIN, username)
+            putBoolean(KEY_IS_LOGGED_IN, true)
+            putString(KEY_USERNAME, username)
+            putString(KEY_USER_ROLE, rol.name)
             apply()  // Guarda en background
         }
     }
     
+    // Mantener compatibilidad con código existente de admin por ahora, redirigiendo a nueva lógica
+    fun guardarSesionAdmin(username: String) {
+        guardarSesion(username, Rol.ADMIN)
+    }
+    
     /**
-     * Verifica si hay un admin logueado
+     * Verifica si hay un usuario logueado
+     */
+    fun estaLogueado(): Boolean {
+        return prefs.getBoolean(KEY_IS_LOGGED_IN, false)
+    }
+
+    /**
+     * Verifica si el usuario logueado es Admin
      */
     fun estaAdminLogueado(): Boolean {
-        return prefs.getBoolean(KEY_ADMIN_LOGUEADO, false)
+        return estaLogueado() && obtenerRolUsuario() == Rol.ADMIN
     }
     
     /**
-     * Obtiene username del admin logueado
+     * Obtiene username del usuario logueado
      */
-    fun obtenerUsernameAdmin(): String? {
-        return prefs.getString(KEY_USERNAME_ADMIN, null)
+    fun obtenerUsername(): String? {
+        return prefs.getString(KEY_USERNAME, null)
+    }
+
+    fun obtenerUsernameAdmin(): String? = obtenerUsername()
+
+    /**
+     * Obtiene el rol del usuario logueado
+     */
+    fun obtenerRolUsuario(): Rol? {
+        val roleName = prefs.getString(KEY_USER_ROLE, null) ?: return null
+        return try {
+            Rol.valueOf(roleName)
+        } catch (e: IllegalArgumentException) {
+            null
+        }
     }
     
     /**
-     * Cierra sesión de admin
+     * Cierra sesión
      */
-    fun cerrarSesionAdmin() {
+    fun cerrarSesion() {
         prefs.edit().apply {
-            remove(KEY_ADMIN_LOGUEADO)
-            remove(KEY_USERNAME_ADMIN)
+            remove(KEY_IS_LOGGED_IN)
+            remove(KEY_USERNAME)
+            remove(KEY_USER_ROLE)
             apply()
         }
     }
+
+    fun cerrarSesionAdmin() = cerrarSesion()
     
     /**
      * Valida credenciales de admin

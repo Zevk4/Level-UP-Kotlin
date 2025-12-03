@@ -8,8 +8,9 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,15 +29,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import android.util.Log
+import com.example.labx.R
 import com.example.labx.data.repository.CarritoRepository
 import com.example.labx.data.repository.ProductoRepositoryImpl
 import com.example.labx.domain.model.Producto
@@ -78,6 +83,15 @@ fun HomeScreen(
 
     val categorias = remember(uiState.productos) {
         uiState.productos.map { it.categoria }.distinct().sorted()
+    }
+
+    val scope = rememberCoroutineScope()
+
+    // Función local para manejar el agregado al carrito (pasada al hijo)
+    val onAgregarAlCarrito: (Producto) -> Unit = { producto ->
+        scope.launch {
+            carritoRepository.agregarProducto(producto)
+        }
     }
 
     Scaffold(
@@ -211,21 +225,12 @@ fun HomeScreen(
                             )
                         }
 
-                        // Lista de productos filtrados
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp) // Aumentado espacio para el botón
-                        ) {
-                            items(productosFiltrados) { producto ->
-                                // ¡MODIFICACIÓN! Pasamos el carritoRepository
-                                ProductoCard(
-                                    producto = producto,
-                                    carritoRepository = carritoRepository,
-                                    onClick = { onProductoClick(producto.id) }
-                                )
-                            }
-                        }
+                        // Lista de productos (GRID MODERNO)
+                        ProductGrid(
+                            productos = productosFiltrados,
+                            onProductoClick = onProductoClick,
+                            onAgregarAlCarrito = onAgregarAlCarrito
+                        )
                     }
                 }
             }
@@ -233,126 +238,143 @@ fun HomeScreen(
     }
 }
 
-/**
- * Card de producto: Muestra info básica del producto con imagen y botón para agregar al carrito
- */
 @Composable
-fun ProductoCard(
-    producto: Producto,
-    carritoRepository: CarritoRepository, // 1. Recibimos el repositorio
-    onClick: () -> Unit
+fun ProductGrid(
+    productos: List<Producto>,
+    onProductoClick: (Int) -> Unit,
+    onAgregarAlCarrito: (Producto) -> Unit
 ) {
-    // 2. Estados para el mensaje de confirmación
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Fixed(2), // 2 columnas
+        contentPadding = PaddingValues(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalItemSpacing = 8.dp,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        items(productos) { producto ->
+            ProductItemCard(
+                producto = producto,
+                onProductoClick = onProductoClick,
+                onAgregarAlCarrito = onAgregarAlCarrito
+            )
+        }
+    }
+}
+
+@Composable
+fun ProductItemCard(
+    producto: Producto,
+    onProductoClick: (Int) -> Unit,
+    onAgregarAlCarrito: (Producto) -> Unit
+) {
+    // Estado local para mostrar confirmación breve al agregar
     var mostrarMensaje by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+
+    // Efecto para ocultar el mensaje
+    if (mostrarMensaje) {
+        LaunchedEffect(Unit) {
+            delay(1500)
+            mostrarMensaje = false
+        }
+    }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            .clickable { onProductoClick(producto.id) },
+        shape = RoundedCornerShape(16.dp), // Bordes más redondeados
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        // Usamos una Columna para poder poner el botón y el mensaje debajo
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Imagen del producto con Coil
-                val context = LocalContext.current
-                val imageResId = context.resources.getIdentifier(
-                    producto.imagenUrl,
-                    "drawable",
-                    context.packageName
-                )
-
+        Column {
+            // Contenedor de la imagen con Badges
+            Box(modifier = Modifier.height(160.dp)) {
                 AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(if (imageResId != 0) imageResId else producto.imagenUrl)
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(producto.imagenUrl)
                         .crossfade(true)
+                        .error(R.drawable.icon) // Fallback icon si falla
                         .build(),
                     contentDescription = producto.nombre,
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(8.dp)),
                     contentScale = ContentScale.Crop,
-                    onError = { error ->
-                        Log.e("HomeScreen", "Error cargando imagen: ${error.result.throwable.message}")
-                    }
+                    modifier = Modifier.fillMaxSize()
                 )
 
-                // Información del producto y stock
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                // Badge de Categoría (flotante)
+                Surface(
+                    shape = RoundedCornerShape(bottomEnd = 12.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.TopStart)
                 ) {
                     Text(
-                        text = producto.nombre,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
                         text = producto.categoria,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
-                    Text(
-                        text = producto.precioFormateado(),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    // Información de stock
-                    if (producto.hayStock) {
+                }
+
+                // Badge de Stock (si es bajo)
+                if (producto.stock > 0 && producto.stock < 5) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(4.dp)
+                    ) {
                         Text(
-                            text = "Stock: ${producto.stock}",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                    } else {
-                        Text(
-                            text = "Sin stock",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.error
+                            text = "¡Quedan ${producto.stock}!",
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 3. Botón para agregar al carrito
-            Button(
-                onClick = {
-                    scope.launch {
-                        carritoRepository.agregarProducto(producto)
-                        mostrarMensaje = true
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = producto.hayStock // Deshabilitado si no hay stock
-            ) {
-                Text("Agregar al Carrito")
-            }
-
-            // 4. Mensaje de confirmación
-            if (mostrarMensaje) {
+            // Información del producto
+            Column(modifier = Modifier.padding(12.dp)) {
                 Text(
-                    text = "✓ Producto agregado al carrito",
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .padding(top = 8.dp),
-                    fontWeight = FontWeight.Bold
+                    text = producto.nombre,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
-                // Efecto para que el mensaje desaparezca después de 2 segundos
-                LaunchedEffect(mostrarMensaje) {
-                    delay(2000)
-                    mostrarMensaje = false
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = producto.precioFormateado(),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.secondary,
+                    fontWeight = FontWeight.ExtraBold
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Botón de acción (Ancho completo o ícono)
+                Button(
+                    onClick = {
+                        onAgregarAlCarrito(producto)
+                        mostrarMensaje = true
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (mostrarMensaje) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = if (mostrarMensaje) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    enabled = producto.hayStock
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ShoppingCart,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = if (mostrarMensaje) "¡Agregado!" else (if (producto.hayStock) "Agregar" else "Agotado"))
                 }
             }
         }

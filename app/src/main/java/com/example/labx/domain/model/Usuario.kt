@@ -5,11 +5,12 @@ package com.example.labx.domain.model
  */
 data class Usuario(
     val username: String,
+    val email: String, // Nuevo campo
     val password: String,
-    val rol: Rol = Rol.USUARIO
+    val rol: Rol = Rol.CLIENTE
 )
 
 enum class Rol {
-    USUARIO,
-    ADMIN
+    ADMIN,
+    CLIENTE
 }

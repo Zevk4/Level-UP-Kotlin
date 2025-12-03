@@ -14,11 +14,14 @@ import com.example.labx.ui.screenimport.CarritoScreen
 import com.example.labx.data.local.PreferenciasManager
 import com.example.labx.data.repository.CarritoRepository
 import com.example.labx.data.repository.ProductoRepositoryImpl
+import com.example.labx.ui.navigation.Rutas
 import com.example.labx.ui.screen.AdminPanelScreen
+import com.example.labx.ui.screen.AuthSelectorScreen
 import com.example.labx.ui.screen.DetalleProductoScreen
 import com.example.labx.ui.screen.FormularioProductoScreen
 import com.example.labx.ui.screen.HomeScreen
 import com.example.labx.ui.screen.LoginAdminScreen
+import com.example.labx.ui.screen.LoginUsuarioScreen
 import com.example.labx.ui.screen.PortadaScreen
 import com.example.labx.ui.screen.RegistroScreen
 import com.example.labx.ui.viewmodel.ProductoViewModel
@@ -71,13 +74,44 @@ fun NavGraph(
                     navController.navigate(Rutas.CARRITO)
                 },
                 onRegistroClick = {
-                    // Ir a registro
-                    navController.navigate(Rutas.REGISTRO)
+                    // Ir a la selección de autenticación
+                    navController.navigate(Rutas.AUTH_SELECTOR)
                 },
                 onVolverPortada = {
                     // Volver a portada
                     navController.navigate(Rutas.PORTADA) {
                         popUpTo(Rutas.HOME) { inclusive = true }
+                    }
+                }
+            )
+        }
+        
+        // Ruta: Selector de Autenticación (Nueva)
+        composable(route = Rutas.AUTH_SELECTOR) {
+            AuthSelectorScreen(
+                onLoginClick = {
+                    navController.navigate(Rutas.LOGIN_USUARIO)
+                },
+                onRegistroClick = {
+                    navController.navigate(Rutas.REGISTRO)
+                },
+                onVolverClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        
+        // Ruta: Login de Usuario (Nueva)
+        composable(route = Rutas.LOGIN_USUARIO) {
+            LoginUsuarioScreen(
+                preferenciasManager = preferenciasManager,
+                onVolverClick = {
+                    navController.popBackStack()
+                },
+                onLoginExitoso = {
+                    // Simular login exitoso volviendo al home
+                    navController.navigate(Rutas.HOME) {
+                        popUpTo(Rutas.AUTH_SELECTOR) { inclusive = true }
                     }
                 }
             )
@@ -128,7 +162,7 @@ fun NavGraph(
                     // Después de registrarse, volver a Home
                     navController.navigate(Rutas.HOME) {
                         // Limpiar el back stack para que no pueda volver atrás
-                        popUpTo(Rutas.HOME) { inclusive = true }
+                        popUpTo(Rutas.AUTH_SELECTOR) { inclusive = true }
                     }
                 }
             )
@@ -143,7 +177,12 @@ fun NavGraph(
                     }
                 },
                 onVolverClick = {
-                    navController.popBackStack()
+                    // Intentar volver atrás, si no hay nada, ir a Portada
+                    if (!navController.popBackStack()) {
+                        navController.navigate(Rutas.PORTADA) {
+                            popUpTo(0)
+                        }
+                    }
                 },
                 onValidarCredenciales = preferenciasManager::validarCredencialesAdmin,
                 onGuardarSesion = preferenciasManager::guardarSesionAdmin
@@ -177,10 +216,11 @@ fun NavGraph(
                     productoViewModel.eliminarProducto(producto)
                 },
                 onCerrarSesion = {
-                    preferenciasManager.cerrarSesionAdmin()
+                    // Primero navegar a portada, luego cerrar sesión para evitar rebotes
                     navController.navigate(Rutas.PORTADA) {
                         popUpTo(0)
                     }
+                    preferenciasManager.cerrarSesionAdmin()
                 }
             )
         }

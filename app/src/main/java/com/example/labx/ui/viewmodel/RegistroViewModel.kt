@@ -2,10 +2,8 @@ package com.example.labx.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.example.labx.domain.model.ErroresFormulario
-import com.example.labx.domain.model.FormularioRegistro
-import com.example.labx.domain.validator.ValidadorFormulario
 import com.example.labx.ui.state.RegistroUiState
+import com.example.labx.domain.validator.ValidadorFormulario
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,32 +43,6 @@ class RegistroViewModel : ViewModel() {
     }
     
     /**
-     * Actualiza el teléfono y valida formato chileno
-     */
-    fun onTelefonoChange(telefono: String) {
-        val errores = _uiState.value.errores.copy(
-            telefonoError = ValidadorFormulario.validarTelefono(telefono)
-        )
-        _uiState.value = _uiState.value.copy(
-            formulario = _uiState.value.formulario.copy(telefono = telefono),
-            errores = errores
-        )
-    }
-    
-    /**
-     * Actualiza la dirección y valida longitud mínima
-     */
-    fun onDireccionChange(direccion: String) {
-        val errores = _uiState.value.errores.copy(
-            direccionError = ValidadorFormulario.validarDireccion(direccion)
-        )
-        _uiState.value = _uiState.value.copy(
-            formulario = _uiState.value.formulario.copy(direccion = direccion),
-            errores = errores
-        )
-    }
-    
-    /**
      * Actualiza la contraseña y valida requisitos de seguridad
      */
     fun onPasswordChange(password: String) {
@@ -84,35 +56,6 @@ class RegistroViewModel : ViewModel() {
     }
     
     /**
-     * Actualiza confirmación de contraseña y valida que coincidan
-     */
-    fun onConfirmarPasswordChange(confirmarPassword: String) {
-        val errores = _uiState.value.errores.copy(
-            confirmarPasswordError = ValidadorFormulario.validarConfirmarPassword(
-                _uiState.value.formulario.password,
-                confirmarPassword
-            )
-        )
-        _uiState.value = _uiState.value.copy(
-            formulario = _uiState.value.formulario.copy(confirmarPassword = confirmarPassword),
-            errores = errores
-        )
-    }
-    
-    /**
-     * Actualiza el checkbox de términos
-     */
-    fun onTerminosChange(acepta: Boolean) {
-        val errores = _uiState.value.errores.copy(
-            terminosError = ValidadorFormulario.validarTerminos(acepta)
-        )
-        _uiState.value = _uiState.value.copy(
-            formulario = _uiState.value.formulario.copy(aceptaTerminos = acepta),
-            errores = errores
-        )
-    }
-    
-    /**
      * Verifica si el formulario completo es válido
      */
     fun esFormularioValido(): Boolean {
@@ -121,18 +64,10 @@ class RegistroViewModel : ViewModel() {
         
         return form.nombreCompleto.isNotBlank() &&
                 form.email.isNotBlank() &&
-                form.telefono.isNotBlank() &&
-                form.direccion.isNotBlank() &&
                 form.password.isNotBlank() &&
-                form.confirmarPassword.isNotBlank() &&
-                form.aceptaTerminos &&
                 errors.nombreCompletoError == null &&
                 errors.emailError == null &&
-                errors.telefonoError == null &&
-                errors.direccionError == null &&
-                errors.passwordError == null &&
-                errors.confirmarPasswordError == null &&
-                errors.terminosError == null
+                errors.passwordError == null
     }
     
     /**

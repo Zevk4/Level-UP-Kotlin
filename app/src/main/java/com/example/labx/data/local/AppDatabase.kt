@@ -40,9 +40,9 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "labx_database"
+                    "level_up_database"
                 )
-                    .fallbackToDestructiveMigration() // Borra BD si cambia versión
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance

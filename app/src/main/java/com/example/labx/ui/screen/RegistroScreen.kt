@@ -34,7 +34,6 @@ fun RegistroScreen(
     
     val uiState by viewModel.uiState.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
-    var confirmarPasswordVisible by remember { mutableStateOf(false) }
     
     Scaffold(
         topBar = {
@@ -94,35 +93,6 @@ fun RegistroScreen(
                 }
             )
             
-            // Campo: Teléfono
-            OutlinedTextField(
-                value = uiState.formulario.telefono,
-                onValueChange = { viewModel.onTelefonoChange(it) },
-                label = { Text("Teléfono (9 dígitos)") },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                isError = uiState.errores.telefonoError != null,
-                supportingText = {
-                    uiState.errores.telefonoError?.let {
-                        Text(text = it, color = MaterialTheme.colorScheme.error)
-                    }
-                }
-            )
-            
-            // Campo: Dirección
-            OutlinedTextField(
-                value = uiState.formulario.direccion,
-                onValueChange = { viewModel.onDireccionChange(it) },
-                label = { Text("Dirección") },
-                modifier = Modifier.fillMaxWidth(),
-                isError = uiState.errores.direccionError != null,
-                supportingText = {
-                    uiState.errores.direccionError?.let {
-                        Text(text = it, color = MaterialTheme.colorScheme.error)
-                    }
-                }
-            )
-            
             // Campo: Contraseña
             OutlinedTextField(
                 value = uiState.formulario.password,
@@ -150,58 +120,6 @@ fun RegistroScreen(
                     }
                 }
             )
-            
-            // Campo: Confirmar Contraseña
-            OutlinedTextField(
-                value = uiState.formulario.confirmarPassword,
-                onValueChange = { viewModel.onConfirmarPasswordChange(it) },
-                label = { Text("Confirmar Contraseña") },
-                modifier = Modifier.fillMaxWidth(),
-                visualTransformation = if (confirmarPasswordVisible) {
-                    VisualTransformation.None
-                } else {
-                    PasswordVisualTransformation()
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                trailingIcon = {
-                    TextButton(onClick = { confirmarPasswordVisible = !confirmarPasswordVisible }) {
-                        Text(
-                            text = if (confirmarPasswordVisible) "Ocultar" else "Mostrar",
-                            fontSize = 12.sp
-                        )
-                    }
-                },
-                isError = uiState.errores.confirmarPasswordError != null,
-                supportingText = {
-                    uiState.errores.confirmarPasswordError?.let {
-                        Text(text = it, color = MaterialTheme.colorScheme.error)
-                    }
-                }
-            )
-            
-            // Checkbox: Términos y condiciones
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start
-            ) {
-                Checkbox(
-                    checked = uiState.formulario.aceptaTerminos,
-                    onCheckedChange = { viewModel.onTerminosChange(it) }
-                )
-                Text(
-                    text = "Acepto los términos y condiciones",
-                    modifier = Modifier.padding(start = 8.dp, top = 12.dp)
-                )
-            }
-            
-            // Mensaje de error para términos
-            uiState.errores.terminosError?.let {
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 12.sp
-                )
-            }
             
             Spacer(modifier = Modifier.height(8.dp))
             

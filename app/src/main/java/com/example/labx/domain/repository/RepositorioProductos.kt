@@ -12,6 +12,11 @@ interface RepositorioProductos {
      * Obtiene todos los productos como Flow
      */
     fun obtenerProductos(): Flow<List<Producto>>
+
+    /**
+     * Obtiene productos filtrados por categoría
+     */
+    fun obtenerProductosPorCategoria(categoria: String): Flow<List<Producto>>
     
     /**
      * Obtiene un producto por su ID
